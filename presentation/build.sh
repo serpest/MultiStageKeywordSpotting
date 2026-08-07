@@ -3,5 +3,5 @@ bibtex main
 pdflatex main.tex
 pdflatex main.tex
 
-rm *.aux *.log *.out
+rm *.aux *.log *.nav *.out *.snm *.toc
 rm *.bbl *.blg
