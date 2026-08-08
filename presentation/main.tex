@@ -88,11 +88,11 @@
       \centering
       \begin{tabular}{cccccc}
         \toprule
-        \textbf{Modello} & $\mathbf{k}$ & $\mathbf{d}$ & $\mathbf{d_h}$ & $\mathbf{n}$ & \textbf{\# parameters} \\
+        \textbf{Modello} & $\mathbf{k}$ & $\mathbf{d}$ & $\mathbf{d_h}$ & $\mathbf{n}$ & \textbf{\# parametri} \\
         \midrule
         KWT-1 & 1 & 64 & 64 & 12 & 607K \\
-        KWT-2 & 2 & 128 & 64 & 12 & 2.394K \\
-        KWT-3 & 3 & 192 & 64 & 12 & 5.361K \\
+        KWT-2 & 2 & 128 & 64 & 12 & 2,4M \\
+        KWT-3 & 3 & 192 & 64 & 12 & 5,4M \\
         \bottomrule
       \end{tabular}
     \end{column}
@@ -152,8 +152,8 @@
 
 \begin{frame}{Distillazione II}
   \begin{itemize}
-    \item Il modello teacher scelto è \textbf{Audio Spectrogram Transformer (AST)} \cite{gong2021astaudiospectrogramtransformer}, il quale ha circa 85,4 milioni di parametri e ottiene un'acuratezza del 98,1\% sul dataset \textit{Google Speech Commands v2} nel task a 35 classi. Si noti che nel paper originale è invece stato utilizzato il modello MHAtt-RNN, il quale ottiene un'acuratezza del 97.3\% sullo stesso task;
-    \item SI è usata una versione pre-addestrata del modello AST, la quale è stata fine-tunata sul dataset \textit{Google Speech Commands v2};
+    \item Il modello teacher scelto è \textbf{Audio Spectrogram Transformer (AST)} \cite{gong2021astaudiospectrogramtransformer}, il quale ha circa 85,4 milioni di parametri e ottiene un'accuratezza del 98,1\% sul dataset \textit{Google Speech Commands v2} nel task a 35 classi. Si noti che nel paper originale è invece stato utilizzato il modello MHAtt-RNN, il quale ottiene un'accuratezza del 97,3\% sullo stesso task;
+    \item Si è usata una versione pre-addestrata del modello AST, la quale è stata fine-tunata sul dataset \textit{Google Speech Commands v2};
     \item A differenza del paper originale, nella reimplementazione il modello teacher riceve in input i dati originali senza augmentation a causa delle limitate risorse computazionali disponibili;
     \item In fase di inferenza i logit restituiti dalle due teste vengono mediati per generare la classificazione finale.
   \end{itemize}
@@ -161,7 +161,7 @@
 
 \section{Risultati sperimentali}
 
-\begin{frame}{Risultati sperimentali: Curve di training}
+\begin{frame}{Risultati sperimentali: curve di training}
   \begin{columns}[c]
     \begin{column}{0.5\textwidth}
       \centering
@@ -185,7 +185,7 @@
     \begin{column}{0.4\textwidth}
       \begin{itemize}
         \item Di fianco sono riportati i valori di accuratezza ottenuti sul test set senza la distillazione;
-        \item I valori ottenuti nella reimplementazione potrebbero differire da quelli riportati nel paper originale a causa dell'uso dell'early stopping, il quale termina l'addestramento prima del raggiungimento del 25\%--40\% del numero massimo di step.
+        \item I valori ottenuti nella reimplementazione potrebbero differire da quelli riportati nel paper originale a causa dell'uso dell'early stopping, il quale termina l'addestramento al raggiungimento del 25\%--40\% del numero massimo di step.
       \end{itemize}
     \end{column}
     \begin{column}{0.6\textwidth}
