@@ -1,10 +1,16 @@
 \documentclass[11pt, a4paper]{article}
 \usepackage[top=2cm, bottom=2cm, left=2cm, right=2cm]{geometry}
 \usepackage[italian]{babel}
+\usepackage{booktabs}
+\usepackage{svg}
+\usepackage{subcaption}
 \usepackage{hyperref}
+\usepackage[italian]{cleveref}
 \usepackage{amssymb}
+\hypersetup{hidelinks}
 
-\title{Keyword Transformer}
+
+\title{Keyword Transformer: reimplementazione in Keras e TensorFlow}
 \author{Salvo Portuesi}
 \date{}
 
@@ -12,5 +18,201 @@
 \begin{document}
 
 \maketitle
+
+\section{Introduzione}
+
+L'architettura \textbf{Keyword Transformer (KWT)} \cite{Berg_2021} è stata sviluppata per il \textit{Keyword Spotting}, ovvero la classificazione di parole a partire da segnali audio.
+
+KWT si basa sul meccanismo di \textbf{self-attention} ispirandosi al \textit{Vision Transformer (ViT)}. Il modello applica la self-attention nel dominio del tempo a partire dagli spettrogrammi MFCC.
+
+KWT ottiene prestazioni \textbf{State-of-the-Art (SOTA)} sul dataset \textit{Google Speech Commands v2} \cite{warden2018speechcommandsdatasetlimitedvocabulary}:
+\begin{itemize}
+  \item 98,56\% di accuratezza nel task a 12 comandi;
+  \item 97,74\% di accuratezza nel task a 35 comandi.
+\end{itemize}
+
+Obiettivo di questo lavoro: \textbf{reimplementare} l'architettura KWT in Keras e TensorFlow verificandone le prestazioni rispetto ai valori riportati nel paper originale.
+
+\section{Modello}
+
+KWT proietta lo \textbf{spettrogramma MFCC} in ingresso $X \in \mathbb{R}^{T \times F}$ (con $T=98$ frame temporali e $F=40$ coefficienti MFCC) in uno spazio a più alta dimensionalità $\mathbb{R}^{(T+1) \times d}$. In particolare:
+\begin{itemize}
+  \item Ciascun frame temporale viene proiettato in una dimensione di embedding $d$ tramite una matrice $W_0 \in \mathbb{R}^{F \times d}$;
+  \item Per apprendere una rappresentazione globale dell'audio, alla sequenza temporale viene concatenato in testa un vettore $X_{class} \in \mathbb{R}^{1 \times d}$;
+  \item A quanto ottenuto viene quindi sommata una matrice $X_{pos} \in \mathbb{R}^{(T+1) \times d}$;
+  \item Complessivamente, si ottiene la matrice $X_0 = [X_{class}; X W_0] + X_{pos} \in \mathbb{R}^{(T+1) \times d}$.
+\end{itemize}
+
+Nel codice è stato implementato un blocco \texttt{EmbeddingBlockKWT} che incapsula le operazioni di proiezione, concatenazione del vettore di classe e somma dell'embedding posizionale.
+
+La matrice $X_0$ viene elaborata da una sequenza di $n$ blocchi Transformer. Ciascun blocco è composto da:
+\begin{itemize}
+  \item Un modulo \textbf{Multi-Head Self-Attention (MSA)} con $k$ teste ed una dimensione per testa $d_h$;
+  \item Un modulo \textbf{Multi-Layer Perceptron (MLP)} a due strati densi con dimensione nascosta $4 \cdot d$ e funzione di attivazione GELU.
+\end{itemize}
+
+Come mostrato in \Cref{fig:kwt_postnorm}, il blocco utilizza una struttura \textbf{PostNorm}, in cui la \textbf{Layer Normalization (LN)} è applicata dopo le connessioni residue dei moduli MSA e MLP.
+
+A valle degli $n$ blocchi, il vettore di classe $X_{class}$ viene estratto e inviato a una testa di classificazione lineare per ottenere i logit di output.
+
+\begin{figure}
+  \center
+  \includesvg{figures/postnorm}
+  \caption{Struttura PostNorm di ciascun blocco Transformer.}
+  \label{fig:kwt_postnorm}
+\end{figure}
+
+Si considerano \textbf{tre varianti} del modello KWT, differenziate dal numero di teste di attenzione $k$.
+
+Si impone $k \cdot d_h = d$ per fare in modo che la somma delle dimensioni delle $k$ teste equivalga esattamente alla dimensione originale dell'embedding $d$.
+
+La testa di classificazione lineare finale ha dimensione pari al numero di classi target (12 o 35).
+
+\begin{table}
+  \center
+  \begin{tabular}{cccccc}
+    \toprule
+    \textbf{Modello} & $\mathbf{k}$ & $\mathbf{d}$ & $\mathbf{d_h}$ & $\mathbf{n}$ & \textbf{\# parametri} \\
+    \midrule
+    KWT-1 & 1 & 64 & 64 & 12 & 607K \\
+    KWT-2 & 2 & 128 & 64 & 12 & 2,4M \\
+    KWT-3 & 3 & 192 & 64 & 12 & 5,4M \\
+    \bottomrule
+  \end{tabular}
+  \caption{Parametri per ciascuna variante del modello KWT.}
+  \label{tab:kwt_varianti}
+\end{table}
+
+In \Cref{tab:kwt_varianti} sono riportati i parametri principali per ciascuna variante del modello KWT.
+
+\section{Dataset}
+
+Si fa uso del dataset \textbf{Google Speech Commands v2} \cite{warden2018speechcommandsdatasetlimitedvocabulary}, composto da campioni audio della durata di 1,0 secondo a una frequenza di campionamento di 16.000 Hz.
+
+La classe \texttt{SpeechCommandsDatasetManager} supporta sia la modalità a 12 classi (10 parole chiave target, oltre alle label speciali \texttt{\_silence\_} e \texttt{\_unknown\_}) sia la modalità estesa a 35 classi.
+
+La pipeline di gestione dati prevede la suddivisione del dataset in tre split: training (80\%), validation (10\%) e test (10\%).
+
+\section{Preprocessing e augmentation}
+
+La trasformazione degli audio grezzi prevede l'applicazione della \textbf{STFT} tramite finestra temporale di Hann da 30 ms e passo di scorrimento di 10 ms, da cui vengono derivati gli spettrogrammi log-mel e i primi 40 \textbf{coefficienti MFCC} per i 98 frame temporali.
+
+Durante l'addestramento, vengono applicate le seguenti tecniche di data augmentation:
+\begin{itemize}
+  \item \textbf{Traslazione temporale} casuale fino a un massimo di 100 ms;
+  \item \textbf{Ricampionamento} casuale nell'intervallo $[0.85, 1.15]$;
+  \item \textbf{Aggiunta di rumore di fondo} con un coefficiente di volume pari a 0,1;
+  \item \textbf{SpecAugment} \cite{Park_2019} sugli spettrogrammi MFCC tramite 2 mascheramenti temporali (dimensione massima 25) e 2 mascheramenti in frequenza (dimensione massima 7).
+\end{itemize}
+
+\section{Addestramento}
+
+L'addestramento del modello viene eseguito per un massimo di \textbf{23.000 step} (247 epoche nel task a 12 classi e 139 epoche nel task a 35 classi) con una dimensione di batch pari a 512.
+
+Viene impiegato l'ottimizzatore \textbf{AdamW} con un valore di weight decay impostato a 0,1.
+
+Il tasso di apprendimento iniziale di 0,001 segue un decadimento cosinoidale con 10 epoche di warmup iniziale.
+
+La funzione di perdita utilizzata è la \textbf{cross-entropy} integrata con label smoothing di 0,1.
+
+Viene applicato l'\textbf{early stopping} con una pazienza di 10 epoche monitorando la loss di validazione.
+
+\subsection{Distillazione}
+
+Il modello viene addestrato a \textbf{imitare} le predizioni di un modello pre-addestrato più grande e accurato (teacher), in modo da trasferire conoscenza al modello più piccolo (student).
+
+La tecnica di distillazione scelta fa uso di un \textbf{token di distillazione} e, di conseguenza, è necessario apportare alcune modifiche all'architettura KWT:
+\begin{itemize}
+  \item Il blocco \texttt{EmbeddingBlockKWT} viene esteso a \texttt{EmbeddingBlockKWTDistilled} per aggiungere un token di distillazione $X_{dist}$ alla sequenza di ingresso. Si ottiene così una sequenza di embedding di dimensione $(T+2) \times d$;
+  \item Il blocco \texttt{KeywordTransformer} viene esteso a \texttt{KeywordTransformerDistilled} per aggiungere una seconda testa lineare che prende in input il token di distillazione $X_{dist}$ e produce i logit di distillazione.
+\end{itemize}
+
+La funzione di perdite complessiva è definita dalla media tra la cross-entropy del token di classe sulle etichette reali e la cross-entropy del token di distillazione sulle predizioni del teacher.
+
+Il modello teacher scelto è \textbf{Audio Spectrogram Transformer (AST)} \cite{gong2021astaudiospectrogramtransformer}, il quale ha circa 85,4 milioni di parametri e ottiene un'accuratezza del 98,1\% sul dataset \textit{Google Speech Commands v2} nel task a 35 classi. Si noti che nel paper originale è invece stato utilizzato il modello MHAtt-RNN, il quale ottiene un'accuratezza del 97,3\% sullo stesso task.
+
+Si è usata una versione pre-addestrata del modello AST, la quale è stata fine-tunata sul dataset \textit{Google Speech Commands v2}.
+
+A differenza del paper originale, nella reimplementazione il modello teacher riceve in input i dati originali senza augmentation a causa delle limitate risorse computazionali disponibili.
+
+In fase di inferenza i logit restituiti dalle due teste vengono mediati per generare la classificazione finale.
+
+\section{Risultati sperimentali}
+
+\begin{figure}
+  \begin{subfigure}{0.5\textwidth}
+    \includesvg[width=\textwidth]{figures/kwt_2_12_loss}
+    \caption{Curva di loss.}
+  \end{subfigure}
+  \begin{subfigure}{0.5\textwidth}
+    \includesvg[width=\textwidth]{figures/kwt_2_12_accuracy}
+    \caption{Curva di accuratezza.}
+  \end{subfigure}
+  \caption{Curve di loss e accuratezza durante l'addestramento del modello KWT-2 sul task a 12 classi.}
+  \label{fig:kwt_2_12_curve_training}
+\end{figure}
+
+In \Cref{fig:kwt_2_12_curve_training} sono riportate le curve di loss e accuratezza durante l'addestramento del modello KWT-2 sul task a 12 classi.
+
+Si osserva che l'early stopping termina l'addestramento dopo 64 epoche (su un massimo di 247) a causa della stagnazione della loss di validazione.
+
+\subsection{Addestramento senza distillazione}
+
+\begin{table}
+  \center
+  \begin{tabular}{ccc}
+    \toprule
+    \textbf{Modello} & \textbf{V2-12 (\%)} & \textbf{V2-35 (\%)} \\
+    \midrule
+    KWT-1 (paper) & 97,72 & 96,85 \\
+    KWT-2 (paper) & 98,21 & 97,53 \\
+    KWT-3 (paper) & 98,54 & 97,51 \\
+    \midrule
+    KWT-1 (reimpl) & 96,78 & 95,07 \\
+    KWT-2 (reimpl) & 97,08 & TODO \\
+    KWT-3 (reimpl) & TODO & TODO \\
+    \bottomrule
+  \end{tabular}
+  \caption{Accuratezza dei modelli KWT sul test set del dataset \textit{Google Speech Commands v2} senza distillazione.}
+  \label{tab:kwt_accuratezza_senza_distillazione}
+\end{table}
+
+In \Cref{tab:kwt_accuratezza_senza_distillazione} sono riportati i valori di accuratezza dei modelli KWT sul test set del dataset \textit{Google Speech Commands v2} senza distillazione.
+
+I valori ottenuti nella reimplementazione potrebbero differire da quelli riportati nel paper originale a causa dell'uso dell'early stopping, il quale termina l'addestramento al raggiungimento del 25\%--40\% del numero massimo di step.
+
+\subsection{Addestramento con distillazione}
+
+\begin{table}
+  \center
+  \begin{tabular}{cc}
+    \toprule
+    \textbf{Modello} & \textbf{V2-35 (\%)} \\
+    \midrule
+    KWT-1 (paper) & 97,69 \\
+    KWT-2 (paper) & 97,74 \\
+    KWT-3 (paper) & 96,95 \\
+    \midrule
+    KWT-1 (reimpl) & TODO \\
+    KWT-2 (reimpl) & TODO \\
+    KWT-3 (reimpl) & TODO \\
+    \bottomrule
+  \end{tabular}
+  \caption{Accuratezza dei modelli KWT sul test set del dataset \textit{Google Speech Commands v2} con distillazione.}
+  \label{tab:kwt_accuratezza_con_distillazione}
+\end{table}
+
+In \Cref{tab:kwt_accuratezza_con_distillazione} sono riportati i valori di accuratezza dei modelli KWT sul test set del dataset \textit{Google Speech Commands v2} con distillazione.
+
+Poiché il modello teacher AST è stato addestrato solo sul task a 35 classi, la distillazione è stata applicata esclusivamente a quest'ultimo caso.
+
+\section{Conclusione}
+
+La reimplementazione descritta conferma l'efficacia dell'architettura \textbf{Keyword Transformer (KWT)} per la classificazione di parole a partire da segnali audio.
+
+L'applicazione della \textbf{self-attention} sui frame temporali degli \textbf{spettrogrammi MFCC}, insieme ad adeguate strategie di \textbf{augmentation} e alla \textbf{distillazione} della conoscenza da un modello AST, consente di raggiungere prestazioni State-of-the-Art (SOTA) sul dataset \textit{Google Speech Commands v2}.
+
+\bibliographystyle{ieeetr}
+\bibliography{references}
 
 \end{document}
