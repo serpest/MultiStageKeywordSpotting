@@ -114,13 +114,13 @@
 
 \begin{frame}{Preprocessing e augmentation} 
   \begin{itemize}
-    \item La trasformazione degli audio grezzi prevede l'applicazione della \textbf{STFT} tramite finestra temporale di Hann da 30 ms e passo di scorrimento di 10 ms, da cui vengono derivati gli spettrogrammi log-mel e i primi 40 \textbf{coefficienti MFCC} per i 98 frame temporali;
+    \item La trasformazione degli audio grezzi prevede l'applicazione della \textbf{STFT} con finestra temporale di Hann di 30 ms e passo di scorrimento di 10 ms, da cui vengono derivati gli spettrogrammi log-mel e i primi 40 \textbf{coefficienti MFCC} per i 98 frame temporali;
     \item Durante l'addestramento, vengono applicate le seguenti tecniche di data augmentation:
     \begin{itemize}
       \item \textbf{Traslazione temporale} casuale fino a un massimo di 100 ms;
       \item \textbf{Ricampionamento} casuale nell'intervallo $[0.85, 1.15]$;
       \item \textbf{Aggiunta di rumore di fondo} con un coefficiente di volume pari a 0,1;
-      \item \textbf{SpecAugment} \cite{Park_2019} sugli spettrogrammi MFCC tramite 2 mascheramenti temporali (dimensione massima 25) e 2 mascheramenti in frequenza (dimensione massima 7).
+      \item \textbf{SpecAugment} \cite{Park_2019} sugli spettrogrammi MFCC con 2 mascheramenti temporali (dimensione massima 25) e 2 mascheramenti in frequenza (dimensione massima 7).
     \end{itemize}
   \end{itemize}
 \end{frame}
@@ -144,8 +144,8 @@
     \item Il modello viene addestrato a \textbf{imitare} le predizioni di un modello pre-addestrato più grande e accurato (teacher), in modo da trasferire conoscenza al modello più piccolo (student);
     \item La tecnica di distillazione scelta fa uso di un \textbf{token di distillazione} e, di conseguenza, è necessario apportare alcune modifiche all'architettura KWT:
     \begin{itemize}
-      \item Il blocco \texttt{EmbeddingBlockKWT} viene esteso a \texttt{EmbeddingBlockKWTDistilled} per aggiungere un token di distillazione $X_{dist}$ alla sequenza di ingresso. Si ottiene così una sequenza di embedding di dimensione $(T+2) \times d$;
-      \item Il blocco \texttt{KeywordTransformer} viene esteso a \texttt{KeywordTransformerDistilled} per aggiungere una seconda testa lineare che prende in input il token di distillazione $X_{dist}$ e produce i logit di distillazione.
+      \item Il blocco \texttt{EmbeddingBlockKWT} viene esteso da \texttt{EmbeddingBlockKWTDistilled} per aggiungere un token di distillazione $X_{dist}$ alla sequenza di ingresso. Si ottiene così una sequenza di embedding di dimensione $(T+2) \times d$;
+      \item Il blocco \texttt{KeywordTransformer} viene esteso da \texttt{KeywordTransformerDistilled} per aggiungere una seconda testa lineare che prende in input il token di distillazione $X_{dist}$ e produce i logit di distillazione.
     \end{itemize}
     \item La funzione di perdita complessiva è definita dalla media tra la cross-entropy del token di classe sulle etichette reali e la cross-entropy del token di distillazione sulle predizioni one-hot del teacher.
   \end{itemize}
@@ -193,7 +193,7 @@
       \centering
       \begin{tabular}{ccc}
         \toprule
-        \textbf{Modello} & \textbf{V2-12 (\%)} & \textbf{V2-35 (\%)} \\
+        \textbf{Modello} & \textbf{v2-12 (\%)} & \textbf{v2-35 (\%)} \\
         \midrule
         KWT-1 (paper) & 97,72 & 96,85 \\
         KWT-2 (paper) & 98,21 & 97,53 \\
@@ -222,7 +222,7 @@
       \centering
       \begin{tabular}{cc}
         \toprule
-        \textbf{Modello} & \textbf{V2-35 (\%)} \\
+        \textbf{Modello} & \textbf{v2-35 (\%)} \\
         \midrule
         KWT-1 (paper) & 97,69 \\
         KWT-2 (paper) & 97,74 \\
