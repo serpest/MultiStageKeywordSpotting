@@ -186,7 +186,7 @@
     \begin{column}{0.4\textwidth}
       \begin{itemize}
         \item Di fianco sono riportati i valori di accuratezza ottenuti sul test set senza la distillazione;
-        \item I valori ottenuti nella reimplementazione potrebbero differire da quelli riportati nel paper originale a causa dell'uso dell'early stopping, il quale termina l'addestramento al raggiungimento del 25\%--40\% del numero massimo di step.
+        \item I valori ottenuti nella reimplementazione potrebbero differire da quelli riportati nel paper originale a causa dell'uso dell'early stopping, il quale termina l'addestramento al raggiungimento del 26\%--74\% del numero massimo di step.
       \end{itemize}
     \end{column}
     \begin{column}{0.6\textwidth}
@@ -197,11 +197,9 @@
         \midrule
         KWT-1 (paper) & 97,72 & 96,85 \\
         KWT-2 (paper) & 98,21 & 97,53 \\
-        KWT-3 (paper) & 98,54 & 97,51 \\
         \midrule
         KWT-1 (reimpl) & 96,78 & 95,07 \\
         KWT-2 (reimpl) & 97,08 & 96,88 \\
-        KWT-3 (reimpl) & TODO & TODO \\
         \bottomrule
       \end{tabular}
     \end{column}
@@ -216,7 +214,8 @@
       \begin{itemize}
         \item Di fianco sono riportati i valori di accuratezza ottenuti sul test set con la distillazione;
         \item Poiché il modello teacher AST è stato addestrato solo sul task a 35 classi, la distillazione è stata applicata esclusivamente a quest'ultimo caso;
-        \item TODO.
+        \item Nell'addestramento di KWT-1 l'early stopping ha causato la terminazione dell'addestramento dopo 44 epoche, mentre per KWT-2 le epoche sono state limitate a 100 a causa delle risorse computazionali disponibili;
+        \item Si osserva un peggioramento dello 0,09\% di accuratezza nel caso di KWT-1 e un miglioramento dello 0,11\% nel caso di KWT-2 rispetto ai valori ottenuti senza distillazione.
       \end{itemize}
     \end{column}
     \begin{column}{0.4\textwidth}
@@ -227,11 +226,9 @@
         \midrule
         KWT-1 (paper) & 97,69 \\
         KWT-2 (paper) & 97,74 \\
-        KWT-3 (paper) & 96,95 \\
         \midrule
-        KWT-1 (reimpl) & TODO \\
+        KWT-1 (reimpl) & 94,98 \\
         KWT-2 (reimpl) & 96,99 \\
-        KWT-3 (reimpl) & TODO \\
         \bottomrule
       \end{tabular}
     \end{column}
