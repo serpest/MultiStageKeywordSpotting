@@ -50,7 +50,7 @@
   \begin{itemize}
     \item Ciascun frame temporale viene proiettato in una dimensione di embedding $d$ tramite una matrice $W_0 \in \mathbb{R}^{F \times d}$;
     \item Per apprendere una rappresentazione globale dell'audio, alla sequenza temporale viene concatenato in testa un vettore $X_{class} \in \mathbb{R}^{1 \times d}$;
-    \item A quanto ottenuto viene quindi sommata una matrice $X_{pos} \in \mathbb{R}^{(T+1) \times d}$;
+    \item A quanto ottenuto viene sommata una matrice di embedding posizionale $X_{pos} \in \mathbb{R}^{(T+1) \times d}$;
     \item Complessivamente, si ottiene la matrice $X_0 = [X_{class}; X W_0] + X_{pos} \in \mathbb{R}^{(T+1) \times d}$.
   \end{itemize}
   Nel codice è stato implementato un blocco \texttt{EmbeddingBlockKWT} che incapsula le operazioni di proiezione, concatenazione del vettore di classe e somma dell'embedding posizionale.
@@ -60,9 +60,9 @@
   \begin{columns}[c]
     \begin{column}{0.6\textwidth}
       \begin{itemize}
-        \item La matrice $X_0$ viene elaborata da una sequenza di $n$ blocchi Transformer. Ciascun blocco è composto da:
+        \item La matrice $X_0$ viene elaborata da una sequenza di $n$ blocchi encoder Transformer. Ciascun blocco è composto da:
         \begin{itemize}
-          \item Un modulo \textbf{Multi-Head Self-Attention (MSA)} con $k$ teste ed una dimensione per testa $d_h$;
+          \item Un modulo \textbf{Multi-Head Self-Attention (MSA)} con $k$ teste e dimensione per testa $d_h$;
           \item Un modulo \textbf{Multi-Layer Perceptron (MLP)} a due strati densi con dimensione nascosta $4 \cdot d$ e funzione di attivazione GELU.
         \end{itemize}
         \item Il blocco utilizza una struttura \textbf{PostNorm}, in cui la \textbf{Layer Normalization (LN)} è applicata dopo le connessioni residue dei moduli MSA e MLP;
@@ -147,7 +147,7 @@
       \item Il blocco \texttt{EmbeddingBlockKWT} viene esteso a \texttt{EmbeddingBlockKWTDistilled} per aggiungere un token di distillazione $X_{dist}$ alla sequenza di ingresso. Si ottiene così una sequenza di embedding di dimensione $(T+2) \times d$;
       \item Il blocco \texttt{KeywordTransformer} viene esteso a \texttt{KeywordTransformerDistilled} per aggiungere una seconda testa lineare che prende in input il token di distillazione $X_{dist}$ e produce i logit di distillazione.
     \end{itemize}
-    \item La funzione di perdite complessiva è definita dalla media tra la cross-entropy del token di classe sulle etichette reali e la cross-entropy del token di distillazione sulle predizioni del teacher.
+    \item La funzione di perdita complessiva è definita dalla media tra la cross-entropy del token di classe sulle etichette reali e la cross-entropy del token di distillazione sulle predizioni one-hot del teacher.
   \end{itemize}
 \end{frame}
 
@@ -200,7 +200,7 @@
         KWT-3 (paper) & 98,54 & 97,51 \\
         \midrule
         KWT-1 (reimpl) & 96,78 & 95,07 \\
-        KWT-2 (reimpl) & 97,08 & TODO \\
+        KWT-2 (reimpl) & 97,08 & 96,88 \\
         KWT-3 (reimpl) & TODO & TODO \\
         \bottomrule
       \end{tabular}
@@ -230,7 +230,7 @@
         KWT-3 (paper) & 96,95 \\
         \midrule
         KWT-1 (reimpl) & TODO \\
-        KWT-2 (reimpl) & TODO \\
+        KWT-2 (reimpl) & 96,99 \\
         KWT-3 (reimpl) & TODO \\
         \bottomrule
       \end{tabular}
