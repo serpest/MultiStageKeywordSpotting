@@ -162,7 +162,11 @@
 
 \section{Risultati sperimentali}
 
+\subsection{Curve di training}
+
 \begin{frame}{Risultati sperimentali: curve di training}
+  Le seguenti figure mostrano le curve di loss e accuratezza durante l'addestramento del modello KWT-2 sul task a 12 classi:
+  \vspace{0.4em}
   \begin{columns}[c]
     \begin{column}{0.5\textwidth}
       \centering
@@ -173,10 +177,8 @@
       \includesvg[width=0.8\textwidth]{figures/kwt_2_12_accuracy}
     \end{column}
   \end{columns}
-  \begin{itemize}
-    \item Le figure mostrano le curve di loss e accuratezza durante l'addestramento del modello KWT-2 sul task a 12 classi;
-    \item Si osserva che l'early stopping termina l'addestramento dopo 64 epoche (su un massimo di 247) a causa della stagnazione della loss di validazione.
-  \end{itemize}
+  \vspace{0.4em}
+  Si osserva che l'early stopping termina l'addestramento dopo 64 epoche (su un massimo di 247) a causa della stagnazione della loss di validazione.
 \end{frame}
 
 \subsection{Addestramento senza distillazione}
@@ -185,8 +187,8 @@
   \begin{columns}[c]
     \begin{column}{0.4\textwidth}
       \begin{itemize}
-        \item Di fianco sono riportati i valori di accuratezza ottenuti sul test set senza la distillazione;
-        \item I valori ottenuti nella reimplementazione potrebbero differire da quelli riportati nel paper originale a causa dell'uso dell'early stopping, il quale termina l'addestramento al raggiungimento del 26\%--74\% del numero massimo di step.
+        \item Di fianco sono riportati i valori di accuratezza ottenuti sul test set senza la distillazione e i relativi numeri di epoche di addestramento tra parentesi;
+        \item I valori ottenuti nella reimplementazione potrebbero differire da quelli riportati nel paper originale a causa dell'uso dell'early stopping.
       \end{itemize}
     \end{column}
     \begin{column}{0.6\textwidth}
@@ -198,8 +200,8 @@
         KWT-1 (paper) & 97,72 & 96,85 \\
         KWT-2 (paper) & 98,21 & 97,53 \\
         \midrule
-        KWT-1 (reimpl) & 96,78 & 95,07 \\
-        KWT-2 (reimpl) & 97,08 & 96,88 \\
+        KWT-1 (reimpl) & 96,78 (71) & 95,07 (54) \\
+        KWT-2 (reimpl) & 97,08 (64) & 96,88 (103) \\
         \bottomrule
       \end{tabular}
     \end{column}
@@ -212,9 +214,9 @@
   \begin{columns}[c]
     \begin{column}{0.6\textwidth}
       \begin{itemize}
-        \item Di fianco sono riportati i valori di accuratezza ottenuti sul test set con la distillazione;
+        \item Di fianco sono riportati i valori di accuratezza ottenuti sul test set con la distillazione e i relativi numeri di epoche di addestramento tra parentesi;
         \item Poiché il modello teacher AST è stato addestrato solo sul task a 35 classi, la distillazione è stata applicata esclusivamente a quest'ultimo caso;
-        \item Nell'addestramento di KWT-1 l'early stopping ha causato la terminazione dell'addestramento dopo 44 epoche, mentre per KWT-2 le epoche sono state limitate a 100 a causa delle risorse computazionali disponibili;
+        \item Nell'addestramento di KWT-2 le epoche sono state limitate a 100 a causa delle ridotte risorse computazionali disponibili;
         \item Si osserva un peggioramento dello 0,09\% di accuratezza nel caso di KWT-1 e un miglioramento dello 0,11\% nel caso di KWT-2 rispetto ai valori ottenuti senza distillazione.
       \end{itemize}
     \end{column}
@@ -227,10 +229,59 @@
         KWT-1 (paper) & 97,69 \\
         KWT-2 (paper) & 97,74 \\
         \midrule
-        KWT-1 (reimpl) & 94,98 \\
-        KWT-2 (reimpl) & 96,99 \\
+        KWT-1 (reimpl) & 94,98 (44) \\
+        KWT-2 (reimpl) & 96,99 (100) \\
         \bottomrule
       \end{tabular}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\subsection{Confronto tra modelli}
+
+\begin{frame}{Risultati sperimentali: confronto tra modelli I}
+  Le seguenti figure mostrano le matrici di confusione senza diagonale dei modelli KWT-1 (sinistra) e KWT-2 (destra) sul test set del task a 12 classi:
+  \vspace{0.4em}
+  \begin{columns}[c]
+    \begin{column}{0.5\textwidth}
+      \centering
+      \includesvg[width=0.8\textwidth]{figures/kwt_1_12_confusion_matrix}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \centering
+      \includesvg[width=0.8\textwidth]{figures/kwt_2_12_confusion_matrix}
+    \end{column}
+  \end{columns}
+  \vspace{0.4em}
+  Gli errori si concentrano sulla classe \texttt{\_unknown\_}, la quale è tuttavia sovrarappresentata con un numero di campioni circa 1,8 volte superiore a quello delle altre classi.
+\end{frame}
+
+\begin{frame}{Risultati sperimentali: confronto tra modelli II}
+  Le figure mostrano le matrici di confusione senza diagonale del modello KWT-1 senza distillazione (sinistra) e con distillazione (destra) sul test set del task a 35 classi:
+  \vspace{0.4em}
+  \begin{columns}[c]
+    \begin{column}{0.5\textwidth}
+      \centering
+      \includesvg[width=0.8\textwidth]{figures/kwt_1_35_confusion_matrix}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \centering
+      \includesvg[width=0.8\textwidth]{figures/kwt_1_distilled_35_confusion_matrix}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Risultati sperimentali: confronto tra modelli II}
+  Le figure mostrano le matrici di confusione senza diagonale del modello KWT-2 senza distillazione (sinistra) e con distillazione (destra) sul test set del task a 35 classi:
+  \vspace{0.4em}
+  \begin{columns}[c]
+    \begin{column}{0.5\textwidth}
+      \centering
+      \includesvg[width=0.8\textwidth]{figures/kwt_2_35_confusion_matrix}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \centering
+      \includesvg[width=0.8\textwidth]{figures/kwt_2_distilled_35_confusion_matrix}
     \end{column}
   \end{columns}
 \end{frame}
