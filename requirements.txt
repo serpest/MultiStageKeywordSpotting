@@ -1,0 +1,8 @@
+tensorflow[and-cuda]
+keras
+torch
+transformers
+ipywidgets
+matplotlib
+scikit-learn
+sounddevice
