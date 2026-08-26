@@ -254,7 +254,6 @@ def main(detection_interval = 0.25, min_rms: float = 0.005, prob_threshold: floa
                     continue
                 mfcc = tf.expand_dims(mfcc_extractor(audio_buffer), axis=0)
                 logits = model(mfcc, training=False)
-
                 probs = tf.nn.softmax(logits, axis=-1).numpy()[0]
                 top_index = int(np.argmax(probs))
                 top_keyword = keywords[top_index]
