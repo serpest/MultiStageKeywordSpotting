@@ -10,22 +10,7 @@ from keras import layers
 KEYWORDS_10 = ['up', 'down', 'left', 'right', 'yes', 'no', 'on', 'off', 'go', 'stop']
 SILENCE_KEYWORD = '_silence_'
 UNKNOWN_KEYWORD = '_unknown_'
-
-KEYWORDS_35 = [
-    'backward', 'bed', 'bird', 'cat', 'dog', 'down', 'eight', 'five', 'follow', 'forward',
-    'four', 'go', 'happy', 'house', 'learn', 'left', 'marvin', 'nine', 'no', 'off', 'on',
-    'one', 'right', 'seven', 'sheila', 'six', 'stop', 'three', 'tree', 'two', 'up',
-    'visual', 'wow', 'yes', 'zero'
-]
-
-
-def get_keywords(mode: str) -> list[str]:
-    if mode == '12':
-        return KEYWORDS_10 + [SILENCE_KEYWORD, UNKNOWN_KEYWORD]
-    elif mode == '35':
-        return KEYWORDS_35
-    else:
-        raise ValueError("mode must be '12' or '35'")
+KEYWORDS_12 = KEYWORDS_10 + [SILENCE_KEYWORD, UNKNOWN_KEYWORD]
 
 
 class MFCCExtractor:
@@ -183,10 +168,9 @@ def main(
     window_duration = 1.0
     window_samples = int(sample_rate * window_duration)
     chunk_samples = int(sample_rate * detection_interval)
-    keywords = get_keywords('12')
     mfcc_extractor = MFCCExtractor()
     trigger_model = keras.models.load_model(
-        f'models/kwt_1_trigger_12.keras',
+        f'models/kwt_trigger_12.keras',
         custom_objects={'KeywordTransformer': KeywordTransformer},
         compile=False
     )
@@ -219,13 +203,13 @@ def main(
                     continue
                 mfcc = tf.expand_dims(mfcc_extractor(audio_buffer), axis=0)
                 trigger_logits = trigger_model(mfcc, training=False)
-                trigger_probs = tf.nn.softmax(trigger_logits, axis=-1).numpy()[0]
+                trigger_probs = tf.nn.sigmoid(trigger_logits).numpy()[0]
                 if trigger_probs < trigger_threshold:
                     continue
                 logits = keyword_model(mfcc, training=False)
                 probs = tf.nn.softmax(logits, axis=-1).numpy()[0]
                 top_index = int(np.argmax(probs))
-                top_keyword = keywords[top_index]
+                top_keyword = KEYWORDS_12[top_index]
                 top_prob = float(probs[top_index])
                 if (top_prob >= prob_threshold and top_keyword not in {SILENCE_KEYWORD, UNKNOWN_KEYWORD}):
                     current_time = time.time()
