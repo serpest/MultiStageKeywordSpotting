@@ -105,8 +105,9 @@
 \begin{frame}{Dataset} 
   \begin{itemize}
     \item Si fa uso del dataset \textbf{Google Speech Commands v2} \cite{warden2018speechcommandsdatasetlimitedvocabulary}, composto da campioni audio della durata di 1,0 secondo a una frequenza di campionamento di 16.000 Hz;
-    \item La classe \texttt{SpeechCommandsDatasetManager} supporta sia la modalità a 12 classi (10 parole chiave target, oltre alle label speciali \texttt{\_silence\_} e \texttt{\_unknown\_}) sia la modalità estesa a 35 classi;
-    \item La pipeline di gestione dati prevede la suddivisione del dataset in tre split: training (80\%), validation (10\%) e test (10\%).
+    \item La classe \texttt{SpeechCommandsDatasetManager} supporta sia la task a 12 classi (10 parole chiave target, oltre alle etichette speciali \texttt{\_silence\_} e \texttt{\_unknown\_}) sia la task a 35 classi;
+    \item La pipeline di gestione dati prevede la suddivisione del dataset in tre split: training (80\%), validation (10\%) e test (10\%);
+    \item Nella task a 12 classi, le etichette speciali \texttt{\_silence\_} e \texttt{\_unknown\_} costituiscono ciascuna il 18\% del totale dei campioni, mentre il restante 64\% è suddiviso tra le 10 parole chiave target.
   \end{itemize}
 \end{frame}
 
