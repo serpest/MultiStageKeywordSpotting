@@ -174,16 +174,16 @@ class TwoStageKeywordTransformer(keras.Model):
 
 def main(
     detection_interval = 0.25,
-    min_rms: float = 0.005,
-    trigger_threshold: float = 0.6,
-    prob_threshold: float = 0.75,
+    min_rms: float = 0.5,
+    trigger_threshold: float = 0.4,
+    prob_threshold: float = 0.6,
     min_interval_repeated_keyword: float = 1.0
 ) -> None:
     sample_rate = 16000
     window_duration = 1.0
     window_samples = int(sample_rate * window_duration)
     chunk_samples = int(sample_rate * detection_interval)
-    keywords = get_keywords('35')
+    keywords = get_keywords('12')
     mfcc_extractor = MFCCExtractor()
     trigger_model = keras.models.load_model(
         f'models/kwt_1_trigger_12.keras',
@@ -191,7 +191,7 @@ def main(
         compile=False
     )
     keyword_model = keras.models.load_model(
-        f'models/kwt_1_12.keras',
+        f'models/kwt_2_12.keras',
         custom_objects={'KeywordTransformer': KeywordTransformer},
         compile=False
     )
