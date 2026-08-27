@@ -134,34 +134,11 @@ class KeywordTransformer(keras.Model):
         return logits
 
 
-class TwoStageKeywordTransformer(keras.Model):
-
-    def __init__(
-        self,
-        trigger_model: KeywordTransformer,
-        keyword_model: KeywordTransformer,
-        **kwargs
-    ) -> None:
-        super().__init__(**kwargs)
-        self.trigger_model = trigger_model
-        self.keyword_model = keyword_model
-
-    def call(self, mfccs: tf.Tensor, training: bool = None) -> tf.Tensor:
-        trigger_logits = self.trigger_model(mfccs, training=training)  # Shape: (batch_size, 1)
-        trigger_probs = tf.sigmoid(trigger_logits)
-        keyword_logits = self.keyword_model(mfccs, training=training)  # Shape: (batch_size, num_classes - 1)
-        keyword_probs = tf.nn.softmax(keyword_logits, axis=-1)
-        weighted_keyword_probs = keyword_probs * trigger_probs
-        unknown_probs = 1.0 - trigger_probs
-        output_probs = tf.concat([weighted_keyword_probs, unknown_probs], axis=-1)  # Shape: (batch_size, num_classes)
-        return output_probs
-
-
 def main(
     detection_interval = 0.25,
-    min_rms: float = 0.5,
+    min_rms: float = 0.4,
     trigger_threshold: float = 0.4,
-    prob_threshold: float = 0.6,
+    prob_threshold: float = 0.3,
     min_interval_repeated_keyword: float = 1.0
 ) -> None:
     sample_rate = 16000
