@@ -7,7 +7,7 @@ import keras
 from keras import layers
 
 
-KEYWORDS_12 = ['up', 'down', 'left', 'right', 'yes', 'no', 'on', 'off', 'go', 'stop']
+KEYWORDS_10 = ['up', 'down', 'left', 'right', 'yes', 'no', 'on', 'off', 'go', 'stop']
 SILENCE_KEYWORD = '_silence_'
 UNKNOWN_KEYWORD = '_unknown_'
 
@@ -21,7 +21,7 @@ KEYWORDS_35 = [
 
 def get_keywords(mode: str) -> list[str]:
     if mode == '12':
-        return KEYWORDS_12 + [SILENCE_KEYWORD, UNKNOWN_KEYWORD]
+        return KEYWORDS_10 + [SILENCE_KEYWORD, UNKNOWN_KEYWORD]
     elif mode == '35':
         return KEYWORDS_35
     else:
@@ -87,34 +87,6 @@ class EmbeddingBlockKWT(keras.Layer):
         return X_0
 
 
-class EmbeddingBlockKWTDistilled(keras.Layer):
-
-    def __init__(self, d: int, **kwargs) -> None:
-        super().__init__(**kwargs)
-        self.d = d # Embedding dimension
-
-    def get_config(self) -> dict:
-        config = super().get_config()
-        config.update({'d': self.d})
-        return config
-
-    def build(self, input_shape: tf.TensorShape) -> None:
-        T = input_shape[1]
-        F = input_shape[2]
-        self.W_0 = self.add_weight(shape=(F, self.d))
-        self.X_class = self.add_weight(shape=(1, 1, self.d))
-        self.X_dist = self.add_weight(shape=(1, 1, self.d))
-        self.X_pos = self.add_weight(shape=(1, T + 2, self.d))
-
-    def call(self, mfccs: tf.Tensor) -> tf.Tensor:
-        batch_size = tf.shape(mfccs)[0]
-        X_class_tiled = tf.tile(self.X_class, [batch_size, 1, 1])
-        X_dist_tiled = tf.tile(self.X_dist, [batch_size, 1, 1])
-        X_1 = mfccs @ self.W_0
-        X_0 = tf.concat([X_class_tiled, X_dist_tiled, X_1], axis=1) + self.X_pos
-        return X_0
-
-
 class TransformerBlockKWT(keras.Layer):
 
     def __init__(self, k: int, **kwargs) -> None:
@@ -177,61 +149,54 @@ class KeywordTransformer(keras.Model):
         return logits
 
 
-class KeywordTransformerDistilled(keras.Model):
+class TwoStageKeywordTransformer(keras.Model):
 
-    def __init__(self, num_classes: int, k: int, depth: int = 12, **kwargs) -> None:
+    def __init__(
+        self,
+        trigger_model: KeywordTransformer,
+        keyword_model: KeywordTransformer,
+        **kwargs
+    ) -> None:
         super().__init__(**kwargs)
-        self.num_classes = num_classes
-        self.k = k
-        self.depth = depth
-        self.d = 64 * k
-        self.embedding_block = EmbeddingBlockKWTDistilled(d=self.d)
-        self.transformer_blocks = [TransformerBlockKWT(k=k) for _ in range(depth)]
-        self.class_head = layers.Dense(num_classes)
-        self.distillation_head = layers.Dense(num_classes)
+        self.trigger_model = trigger_model
+        self.keyword_model = keyword_model
 
-    def get_config(self) -> dict:
-        config = super().get_config()
-        config.update({
-            'num_classes': self.num_classes,
-            'k': self.k,
-            'depth': self.depth
-        })
-        return config
-
-    def call(self, mfccs: tf.Tensor, training: bool = None) -> tuple[tf.Tensor, tf.Tensor]:
-        x = self.embedding_block(mfccs)
-        for transformer_block in self.transformer_blocks:
-            x = transformer_block(x, training=training)
-        class_token = x[:, 0, :]
-        distillation_token = x[:, 1, :]
-        class_logits = self.class_head(class_token)
-        distillation_logits = self.distillation_head(distillation_token)
-        return class_logits, distillation_logits
+    def call(self, mfccs: tf.Tensor, training: bool = None) -> tf.Tensor:
+        trigger_logits = self.trigger_model(mfccs, training=training)  # Shape: (batch_size, 1)
+        trigger_probs = tf.sigmoid(trigger_logits)
+        keyword_logits = self.keyword_model(mfccs, training=training)  # Shape: (batch_size, num_classes - 1)
+        keyword_probs = tf.nn.softmax(keyword_logits, axis=-1)
+        weighted_keyword_probs = keyword_probs * trigger_probs
+        unknown_probs = 1.0 - trigger_probs
+        output_probs = tf.concat([weighted_keyword_probs, unknown_probs], axis=-1)  # Shape: (batch_size, num_classes)
+        return output_probs
 
 
-CUSTOM_OBJECTS = {
-    'EmbeddingBlockKWT': EmbeddingBlockKWT,
-    'EmbeddingBlockKWTDistilled': EmbeddingBlockKWTDistilled,
-    'TransformerBlockKWT': TransformerBlockKWT,
-    'KeywordTransformer': KeywordTransformer,
-    'KeywordTransformerDistilled': KeywordTransformerDistilled
-}
-
-
-def main(detection_interval = 0.25, min_rms: float = 0.005, prob_threshold: float = 0.6, min_interval_repeated_keyword: float = 1.0) -> None:
+def main(
+    detection_interval = 0.25,
+    min_rms: float = 0.005,
+    trigger_threshold: float = 0.6,
+    prob_threshold: float = 0.75,
+    min_interval_repeated_keyword: float = 1.0
+) -> None:
     sample_rate = 16000
     window_duration = 1.0
     window_samples = int(sample_rate * window_duration)
     chunk_samples = int(sample_rate * detection_interval)
     keywords = get_keywords('35')
     mfcc_extractor = MFCCExtractor()
-    model = keras.models.load_model(
-        'models/kwt_2_35.keras',
-        custom_objects=CUSTOM_OBJECTS,
-        compile=False # Compilation is not needed for inference
+    trigger_model = keras.models.load_model(
+        f'models/kwt_1_trigger_12.keras',
+        custom_objects={'KeywordTransformer': KeywordTransformer},
+        compile=False
     )
-    model(tf.zeros([1, 98, 40], dtype=tf.float32), training=False) # Warm up the model
+    keyword_model = keras.models.load_model(
+        f'models/kwt_1_12.keras',
+        custom_objects={'KeywordTransformer': KeywordTransformer},
+        compile=False
+    )
+    trigger_model(tf.zeros([1, 98, 40], dtype=tf.float32), training=False) # Warm up the model
+    keyword_model(tf.zeros([1, 98, 40], dtype=tf.float32), training=False) # Warm up the model
     chunk_queue = queue.Queue()
     audio_buffer = np.zeros(window_samples, dtype=np.float32)
     last_detected_keyword = None
@@ -253,7 +218,11 @@ def main(detection_interval = 0.25, min_rms: float = 0.005, prob_threshold: floa
                 if rms < min_rms: # Skip too quiet audio
                     continue
                 mfcc = tf.expand_dims(mfcc_extractor(audio_buffer), axis=0)
-                logits = model(mfcc, training=False)
+                trigger_logits = trigger_model(mfcc, training=False)
+                trigger_probs = tf.nn.softmax(trigger_logits, axis=-1).numpy()[0]
+                if trigger_probs < trigger_threshold:
+                    continue
+                logits = keyword_model(mfcc, training=False)
                 probs = tf.nn.softmax(logits, axis=-1).numpy()[0]
                 top_index = int(np.argmax(probs))
                 top_keyword = keywords[top_index]
