@@ -295,7 +295,7 @@
     \item Nel sistema a due stadi, un primo modello leggero (\textbf{trigger model}) rileva la parola chiave e attiva il secondo stadio, in cui un modello più ampio e preciso (\textbf{keyword model}) si occupa della sua classificazione.
     \item Come trigger model si è addestrato un modello KWT-1 con numero di blocchi encoder Transformer dimezzato, mentre come keyword model si è utilizzato un modello KWT-2. In particolare:
     \begin{itemize}
-      \item Il trigger model ha 307K parametri e ottiene un'accuratezza del 95,90\% nella classificazione binaria tra keyword e non keyword;
+      \item Il trigger model ha 307K parametri e ottiene un'accuratezza del 96,47\% nella classificazione binaria tra keyword e non keyword;
       \item Il keyword model ha 2,4M parametri e ottiene un'accuratezza del 97,08\% nella classificazione tra le 12 classi.
     \end{itemize}
     \item Inoltre, un controllo preliminare basato sul \textbf{Root Mean Square (RMS)} attiva il trigger model solo se il segnale audio supera una soglia predefinita.
