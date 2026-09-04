@@ -60,7 +60,7 @@
   \begin{columns}[c]
     \begin{column}{0.6\textwidth}
       \begin{itemize}
-        \item La matrice $X_0$ viene elaborata da una sequenza di $n$ blocchi encoder Transformer. Ciascun blocco è composto da:
+        \item La matrice $X_0$ viene elaborata da una sequenza di $n$ blocchi Transformer. Ciascun blocco è composto da:
         \begin{itemize}
           \item Un modulo \textbf{Multi-Head Self-Attention (MSA)} con $k$ teste e dimensione per testa $d_h$;
           \item Un modulo \textbf{Multi-Layer Perceptron (MLP)} a due strati densi con dimensione nascosta $4 \cdot d$ e funzione di attivazione GELU.
@@ -292,8 +292,8 @@
 \begin{frame}{Approfondimento: keyword spotting multistadio}
   \begin{itemize}
     \item Le architetture multistadio per il keyword spotting riducono il consumo energetico e la latenza in scenari di inferenza in tempo reale;
-    \item Nel sistema a due stadi, un primo modello leggero (\textbf{trigger model}) rileva la parola chiave e attiva il secondo stadio, in cui un modello più ampio e preciso (\textbf{keyword model}) si occupa della sua classificazione.
-    \item Come trigger model si è addestrato un modello KWT-1 con numero di blocchi encoder Transformer dimezzato, mentre come keyword model si è utilizzato un modello KWT-2. In particolare:
+    \item Nel sistema a due stadi, un primo modello leggero (\textbf{trigger model}) rileva la presenza della parola chiave e attiva il secondo stadio, in cui un modello più ampio e preciso (\textbf{keyword model}) si occupa della sua classificazione.
+    \item Come trigger model si è addestrato un modello KWT-1 con numero di blocchi Transformer dimezzato, mentre come keyword model si è utilizzato un modello KWT-2. In particolare:
     \begin{itemize}
       \item Il trigger model ha 307K parametri e ottiene un'accuratezza del 96,47\% nella classificazione binaria tra keyword e non keyword;
       \item Il keyword model ha 2,4M parametri e ottiene un'accuratezza del 97,08\% nella classificazione tra le 12 classi.
